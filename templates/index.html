@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blockchain Simulator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Courier New', monospace; }
+  .tab-btn.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+  .panel { display:none; }
+  .panel.active { display:block; }
+  pre { white-space: pre-wrap; word-break: break-all; }
+  .pass { color:#4ade80; }
+  .fail { color:#f87171; }
+  .warn { color:#facc15; }
+  .dim  { color:#64748b; }
+  .ok   { color:#38bdf8; }
+  .bar-wrap { background:#1e293b; border-radius:4px; overflow:hidden; height:18px; }
+  .bar-fill { height:100%; border-radius:4px; transition:width .5s ease; }
+  table { border-collapse:collapse; width:100%; }
+  th,td { border:1px solid #334155; padding:6px 10px; text-align:left; font-size:12px; }
+  th { background:#0f172a; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; }
+  tr:nth-child(even) td { background:#0f172a55; }
+  .spinner { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .badge { display:inline-block; padding:2px 8px; border-radius:9999px; font-size:10px; font-weight:700; }
+  .badge-green  { background:#14532d55; color:#4ade80; border:1px solid #4ade8055; }
+  .badge-red    { background:#7f1d1d55; color:#f87171; border:1px solid #f8717155; }
+  .badge-yellow { background:#78350f55; color:#facc15; border:1px solid #facc1555; }
+  .badge-blue   { background:#1e3a5f55; color:#38bdf8; border:1px solid #38bdf855; }
+  .step-log { font-size:11px; line-height:1.8; }
+  .step-log .section { color:#f0abfc; font-weight:700; margin-top:8px; }
+  .step-log .ok      { color:#4ade80; }
+  .step-log .bad     { color:#f87171; }
+  .step-log .info    { color:#94a3b8; }
+  .step-log .data    { color:#38bdf8; }
+</style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen p-4 md:p-8">
+<div class="max-w-6xl mx-auto">
+
+  <!-- Header -->
+  <div class="mb-8 border-b border-slate-800 pb-5">
+    <h1 class="text-xl font-bold text-white">Blockchain Simulator
+      <span class="text-slate-500 text-sm font-normal ml-2">— Consensus · 51% Attack · Performance</span>
+    </h1>
+    <p class="text-slate-500 text-xs mt-1">All simulations run real SHA-256 Proof-of-Work in the Python backend.</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-2 mb-7 flex-wrap">
+    <button onclick="tab('ledger')"    id="t-ledger"    class="tab-btn active px-4 py-2 rounded border border-slate-700 text-xs font-bold uppercase tracking-wide transition-all">📒 Ledger</button>
+    <button onclick="tab('consensus')" id="t-consensus" class="tab-btn        px-4 py-2 rounded border border-slate-700 text-xs font-bold uppercase tracking-wide transition-all">🔗 Consensus</button>
+    <button onclick="tab('attack')"    id="t-attack"    class="tab-btn        px-4 py-2 rounded border border-slate-700 text-xs font-bold uppercase tracking-wide transition-all">⚔️  Attack Sim</button>
+    <button onclick="tab('perf')"      id="t-perf"      class="tab-btn        px-4 py-2 rounded border border-slate-700 text-xs font-bold uppercase tracking-wide transition-all">📊 Performance</button>
+    <button onclick="tab('pow')"       id="t-pow"       class="tab-btn        px-4 py-2 rounded border border-slate-700 text-xs font-bold uppercase tracking-wide transition-all">🔐 PoW Verify</button>
+  </div>
+
+  <!-- ═══ TAB: LEDGER ═══════════════════════════════════════════════════ -->
+  <div id="p-ledger" class="panel active">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <div class="space-y-4">
+        <!-- Tx form -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Add Transaction</h2>
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[10px] text-slate-500 uppercase">From</label>
+                <select id="sender" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+                  <option value="Kritika">Kritika</option>
+                  <option value="Srinithi">Srinithi</option>
+                  <option value="Harsitha">Harsitha</option>
+                  <option value="Nirmal">Nirmal</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-500 uppercase">To</label>
+                <select id="recipient" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+                  <option value="Srinithi">Srinithi</option>
+                  <option value="Kritika">Kritika</option>
+                  <option value="Harsitha">Harsitha</option>
+                  <option value="Nirmal">Nirmal</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-500 uppercase">Amount</label>
+              <input id="amount" type="number" value="10" min="1"
+                class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+            </div>
+            <button onclick="addTx()"
+              class="w-full bg-blue-700 hover:bg-blue-600 text-white py-2 rounded text-xs font-bold transition-all">
+              Broadcast Transaction
+            </button>
+          </div>
+        </div>
+
+        <!-- Mempool -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Mempool</h2>
+            <span id="mpCount" class="badge badge-yellow">0 pending</span>
+          </div>
+          <div id="mpList" class="space-y-2 max-h-40 overflow-y-auto text-xs text-slate-500 italic">
+            No transactions pending
+          </div>
+          <button id="mineBtn" onclick="mine()" class="hidden w-full mt-4 bg-emerald-700 hover:bg-emerald-600 text-white py-2 rounded text-xs font-bold transition-all">
+            ⛏ Mine Block (Real PoW)
+          </button>
+        </div>
+
+        <!-- Last mine result -->
+        <div id="mineResult" class="hidden bg-slate-900 border border-emerald-900 rounded-xl p-5">
+          <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-3">Last Mined Block</h2>
+          <div id="mineData" class="text-xs space-y-1"></div>
+        </div>
+      </div>
+
+      <!-- Chain -->
+      <div class="lg:col-span-2">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-sm font-bold">Chain — node_0
+            <span id="chainLen" class="badge badge-blue ml-2">0 blocks</span>
+          </h2>
+          <button onclick="loadChain()" class="text-[10px] text-slate-500 hover:text-blue-400 uppercase font-bold">↻ Refresh</button>
+        </div>
+        <div id="chainView" class="space-y-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: CONSENSUS ════════════════════════════════════════════════ -->
+  <div id="p-consensus" class="panel">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Setup -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Setup: Create Chain Divergence</h2>
+        <p class="text-xs text-slate-500 mb-4">
+          Mine extra blocks on specific nodes to make their chains diverge.
+          Then run consensus — every peer chain is validated block-by-block (hash linkage + PoW),
+          and the longest valid chain wins.
+        </p>
+
+        <div class="mb-4">
+          <label class="text-[10px] text-slate-500 uppercase">Target Node</label>
+          <select id="mineNode" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+            <option value="node_1">node_1</option>
+            <option value="node_2">node_2</option>
+            <option value="node_3">node_3</option>
+            <option value="node_0">node_0 (primary)</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="text-[10px] text-slate-500 uppercase">Blocks to Mine</label>
+          <input id="mineNodeBlocks" type="number" value="3" min="1" max="10"
+            class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+        </div>
+        <button onclick="syncNodes()" class="w-full bg-orange-700 hover:bg-orange-600 text-white py-2 rounded text-xs font-bold mb-2 transition-all">
+          🔄 Step 1: Sync All Nodes to node_0's Chain
+        </button>
+        <p class="text-[10px] text-slate-600 mb-3">Run this first — copies node_0's chain to all peers so they share the same tip before mining.</p>
+        <button onclick="mineOnNode()" class="w-full bg-indigo-700 hover:bg-indigo-600 text-white py-2 rounded text-xs font-bold mb-3 transition-all">
+          ⛏ Step 2: Mine Extra Blocks on Selected Node
+        </button>
+        <div id="nodeMineLog" class="bg-slate-950 rounded p-3 text-xs font-mono min-h-[60px] text-slate-500"></div>
+
+        <!-- Node status -->
+        <div class="mt-4">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-[10px] text-slate-500 uppercase font-bold">All Node Chain Lengths</span>
+            <button onclick="loadNodeStatus()" class="text-[10px] text-blue-400 hover:text-blue-300">↻ Refresh</button>
+          </div>
+          <div id="nodeStatusTable" class="text-xs text-slate-500 italic">Click refresh to load</div>
+        </div>
+      </div>
+
+      <!-- Consensus result -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Consensus Result</h2>
+          <button onclick="runConsensus()" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-1.5 rounded text-xs font-bold transition-all">
+            ▶ Run Consensus
+          </button>
+        </div>
+        <p class="text-[10px] text-slate-600 mb-3">
+          Runs Nakamoto consensus on node_0 against all peers.
+          Each peer's entire chain is validated hash-by-hash before any replacement.
+        </p>
+        <div id="consensusOut" class="bg-slate-950 rounded p-4 text-xs font-mono step-log min-h-[300px]">
+          Run consensus to see the validation log…
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: ATTACK SIM ═══════════════════════════════════════════════ -->
+  <div id="p-attack" class="panel">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- 51% Attack -->
+      <div class="bg-slate-900 border border-red-950 rounded-xl p-5">
+        <h2 class="text-xs font-bold text-red-400 uppercase tracking-widest mb-2">51% Attack — Real PoW Fork Race</h2>
+        <p class="text-xs text-slate-500 mb-4">
+          The attacker forks from a past block and mines a private chain.
+          Hash power ratio determines mining speed (time is scaled by 50/pct).
+          The attacker then broadcasts the fork; consensus decides the winner.
+          <span class="text-yellow-400">Mine a few blocks on node_0 first</span> so there is a chain to attack.
+        </p>
+
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase">Attacker Hash Power %</label>
+            <input id="atkPct" type="number" value="60" min="1" max="99"
+              class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+            <p class="text-[10px] text-slate-600 mt-1">≤49 → should fail · ≥51 → should succeed</p>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase">Fork Depth (blocks)</label>
+            <input id="forkDepth" type="number" value="2" min="1" max="5"
+              class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+            <p class="text-[10px] text-slate-600 mt-1">How far back attacker forks</p>
+          </div>
+        </div>
+
+        <button onclick="run51()" id="btn51"
+          class="w-full bg-red-800 hover:bg-red-700 text-white py-2 rounded text-xs font-bold mb-4 transition-all">
+          🔥 Launch Attack
+        </button>
+
+        <!-- Summary cards -->
+        <div id="atkSummary" class="hidden grid grid-cols-2 gap-2 mb-4">
+          <div class="bg-slate-950 rounded p-3 text-center">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Outcome</div>
+            <div id="atkOutcome" class="text-sm font-bold"></div>
+          </div>
+          <div class="bg-slate-950 rounded p-3 text-center">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Chain Lengths</div>
+            <div id="atkChainLen" class="text-xs font-mono"></div>
+          </div>
+          <div class="bg-slate-950 rounded p-3 text-center">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Avg Attacker Block Time</div>
+            <div id="atkTime" class="text-sm font-bold text-red-400"></div>
+          </div>
+          <div class="bg-slate-950 rounded p-3 text-center">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Avg Honest Block Time</div>
+            <div id="honTime" class="text-sm font-bold text-green-400"></div>
+          </div>
+        </div>
+
+        <!-- Step log -->
+        <div id="atkLog" class="bg-slate-950 rounded p-4 text-xs font-mono step-log min-h-[180px] max-h-[360px] overflow-y-auto">
+          Step-by-step log will appear here…
+        </div>
+      </div>
+
+      <!-- Invalid Block Rejection -->
+      <div class="bg-slate-900 border border-yellow-950 rounded-xl p-5">
+        <h2 class="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-2">Invalid Block Rejection Tests</h2>
+        <p class="text-xs text-slate-500 mb-4">
+          Four real tampered blocks are constructed and submitted to the chain's
+          <code class="text-slate-300">add_block()</code> method.
+          Each must be rejected with a specific cryptographic reason.
+        </p>
+
+        <table class="mb-4 text-[11px]">
+          <thead><tr>
+            <th>#</th><th>Attack Vector</th><th>Expected</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Wrong <code>previous_hash</code></td><td class="text-yellow-400">REJECT</td></tr>
+            <tr><td>2</td><td>Transaction tampered after mining</td><td class="text-yellow-400">REJECT</td></tr>
+            <tr><td>3</td><td>Hash field manually overwritten</td><td class="text-yellow-400">REJECT</td></tr>
+            <tr><td>4</td><td>Block not mined (nonce=0, fails PoW)</td><td class="text-yellow-400">REJECT</td></tr>
+          </tbody>
+        </table>
+
+        <button onclick="runInvalidTests()" id="btnInvalid"
+          class="w-full bg-yellow-800 hover:bg-yellow-700 text-white py-2 rounded text-xs font-bold mb-4 transition-all">
+          🧪 Run Rejection Tests
+        </button>
+
+        <div id="invalidSummary" class="hidden mb-4 p-3 rounded text-center text-sm font-bold bg-slate-950"></div>
+
+        <div id="invalidTable" class="hidden">
+          <table class="text-[11px]">
+            <thead><tr>
+              <th>#</th><th>Test</th><th>Accepted?</th><th>Reason</th><th>Pass?</th>
+            </tr></thead>
+            <tbody id="invalidTbody"></tbody>
+          </table>
+        </div>
+
+        <div id="invalidLog" class="mt-3 bg-slate-950 rounded p-3 text-xs font-mono step-log min-h-[80px] max-h-[200px] overflow-y-auto text-slate-500">
+          Results will appear here…
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: PERFORMANCE ══════════════════════════════════════════════ -->
+  <div id="p-perf" class="panel">
+
+    <!-- Config row -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+      <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Benchmark Parameters</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase">Difficulty</label>
+          <input id="pDiff" type="number" value="3" min="1" max="5"
+            class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+          <p class="text-[10px] text-slate-600 mt-1">Leading zeros required</p>
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase">Blocks to Mine</label>
+          <input id="pBlocks" type="number" value="5" min="1" max="15"
+            class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase">Txs per Block</label>
+          <input id="pTxs" type="number" value="4" min="1" max="20"
+            class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase">Max Nodes (Scalability)</label>
+          <input id="pNodes" type="number" value="8" min="2" max="20"
+            class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button onclick="runBlockCreation()" class="bg-blue-800 hover:bg-blue-700 text-white px-4 py-2 rounded text-xs font-bold transition-all">Run Block Creation Benchmark</button>
+        <button onclick="runThroughput()"    class="bg-purple-800 hover:bg-purple-700 text-white px-4 py-2 rounded text-xs font-bold transition-all">Run Throughput Benchmark</button>
+        <button onclick="runNetDelay()"      class="bg-teal-800 hover:bg-teal-700 text-white px-4 py-2 rounded text-xs font-bold transition-all">Run Network Delay Benchmark</button>
+        <button onclick="runScalability()"   class="bg-orange-800 hover:bg-orange-700 text-white px-4 py-2 rounded text-xs font-bold transition-all">Run Scalability Benchmark</button>
+      </div>
+    </div>
+
+    <!-- Results grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Block Creation -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h3 class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-1">Block Creation Time</h3>
+        <p class="text-[10px] text-slate-500 mb-4">Real SHA-256 PoW. Time per block varies with nonce search space.</p>
+        <div id="bcSummary" class="flex gap-4 mb-4 hidden">
+          <div class="bg-slate-950 rounded p-3 flex-1 text-center">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Avg</div>
+            <div id="bcAvg" class="text-lg font-bold text-blue-300"></div>
+            <div class="text-[10px] text-slate-600">sec</div>
+          </div>
+          <div class="bg-slate-950 rounded p-3 flex-1 text-center">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Min</div>
+            <div id="bcMin" class="text-lg font-bold text-green-400"></div>
+            <div class="text-[10px] text-slate-600">sec</div>
+          </div>
+          <div class="bg-slate-950 rounded p-3 flex-1 text-center">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Max</div>
+            <div id="bcMax" class="text-lg font-bold text-red-400"></div>
+            <div class="text-[10px] text-slate-600">sec</div>
+          </div>
+        </div>
+        <div id="bcTable" class="hidden">
+          <table class="text-[11px]">
+            <thead><tr>
+              <th>Block</th><th>Nonce</th><th>Hash prefix</th><th>Txs</th><th>Time (s)</th><th>Bar</th>
+            </tr></thead>
+            <tbody id="bcTbody"></tbody>
+          </table>
+        </div>
+        <div id="bcPlaceholder" class="text-slate-600 text-xs italic">Run the benchmark above</div>
+      </div>
+
+      <!-- Throughput -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h3 class="text-xs font-bold text-purple-400 uppercase tracking-widest mb-1">Throughput (TPS)</h3>
+        <p class="text-[10px] text-slate-500 mb-4">Transactions confirmed per second across all mined blocks.</p>
+        <div id="tpBox" class="hidden bg-slate-950 rounded p-6 text-center mb-4">
+          <div class="text-5xl font-black text-purple-300" id="tpValue"></div>
+          <div class="text-xs text-slate-500 mt-1">transactions / second</div>
+        </div>
+        <div id="tpDetail" class="hidden">
+          <table class="text-[11px]">
+            <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+            <tbody id="tpTbody"></tbody>
+          </table>
+        </div>
+        <div id="tpPlaceholder" class="text-slate-600 text-xs italic">Run the benchmark above</div>
+      </div>
+
+      <!-- Network Delay -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h3 class="text-xs font-bold text-teal-400 uppercase tracking-widest mb-1">Network Propagation Delay</h3>
+        <p class="text-[10px] text-slate-500 mb-4">
+          One block is mined and propagated to N nodes.
+          Each node validates (real PoW check) + simulated hop latency.
+        </p>
+        <div id="ndSummary" class="hidden mb-3">
+          <div class="bg-slate-950 rounded p-3 text-center mb-3">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Avg Propagation Delay</div>
+            <div id="ndAvg" class="text-2xl font-bold text-teal-300"></div>
+            <div class="text-[10px] text-slate-600">milliseconds</div>
+          </div>
+        </div>
+        <div id="ndTable" class="hidden">
+          <table class="text-[11px]">
+            <thead><tr>
+              <th>Node</th><th>Validation (ms)</th><th>Hop Latency (ms)</th><th>Total (ms)</th><th>Accepted</th>
+            </tr></thead>
+            <tbody id="ndTbody"></tbody>
+          </table>
+        </div>
+        <div id="ndPlaceholder" class="text-slate-600 text-xs italic">Run the benchmark above</div>
+      </div>
+
+      <!-- Scalability -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h3 class="text-xs font-bold text-orange-400 uppercase tracking-widest mb-1">Scalability</h3>
+        <p class="text-[10px] text-slate-500 mb-4">
+          Mines one block and propagates it to 1…N nodes.
+          Shows how total confirmation time grows with network size.
+        </p>
+        <div id="scTable" class="hidden">
+          <table class="text-[11px] mb-3">
+            <thead><tr>
+              <th>Nodes</th><th>Mine (s)</th><th>Max Prop (s)</th><th>Total Conf (s)</th><th>Nonce</th><th>Bar</th>
+            </tr></thead>
+            <tbody id="scTbody"></tbody>
+          </table>
+        </div>
+        <div id="scPlaceholder" class="text-slate-600 text-xs italic">Run the benchmark above</div>
+      </div>
+    </div>
+  </div><!-- /perf panel -->
+
+  <!-- ═══ TAB: POW VERIFY ══════════════════════════════════════════════ -->
+  <div id="p-pow" class="panel">
+
+    <!-- Section 1: Node Race -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+      <h2 class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1">
+        🏁 Node Mining Race — All 4 Nodes Compete Simultaneously
+      </h2>
+      <p class="text-xs text-slate-500 mb-4">
+        All 4 nodes (node_0–node_3) mine the same pending block at the same time using real threads.
+        The first to find a valid nonce broadcasts its block. The others stop and adopt the winner's block via <code>add_block()</code>.
+        This directly demonstrates: nonce, SHA-256, PoW condition, node competition, and broadcast.
+      </p>
+
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase">Sender</label>
+          <input id="raceSender" value="Alice" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase">Recipient</label>
+          <input id="raceRecipient" value="Bob" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase">Amount</label>
+          <input id="raceAmount" type="number" value="50" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+        </div>
+      </div>
+
+      <button onclick="runRace()" id="raceBtn"
+        class="bg-emerald-800 hover:bg-emerald-700 text-white px-6 py-2 rounded text-xs font-bold transition-all mb-5">
+        ▶ Start Mining Race (4 nodes, real PoW)
+      </button>
+
+      <!-- Winner card -->
+      <div id="raceWinner" class="hidden mb-5 bg-emerald-950 border border-emerald-800 rounded-xl p-5">
+        <div class="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-3">🏆 Winner</div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div class="bg-slate-950 rounded p-3 text-center">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Winning Node</div>
+            <div id="rw_node" class="text-sm font-bold text-emerald-300"></div>
+          </div>
+          <div class="bg-slate-950 rounded p-3 text-center">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Winning Nonce</div>
+            <div id="rw_nonce" class="text-sm font-bold text-white"></div>
+          </div>
+          <div class="bg-slate-950 rounded p-3 text-center">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Mine Time</div>
+            <div id="rw_time" class="text-sm font-bold text-blue-300"></div>
+          </div>
+          <div class="bg-slate-950 rounded p-3 text-center">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">PoW Satisfied</div>
+            <div id="rw_pow" class="text-sm font-bold text-emerald-400">✓ YES</div>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <div>
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Difficulty Requirement</div>
+            <div id="rw_diff" class="font-mono text-xs bg-slate-950 p-2 rounded border border-slate-700 text-yellow-300"></div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Winning Hash (starts with required zeros)</div>
+            <div id="rw_hash" class="font-mono text-xs bg-slate-950 p-2 rounded border border-emerald-900 break-all"></div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Previous Hash (chain linkage)</div>
+            <div id="rw_prev" class="font-mono text-xs bg-slate-950 p-2 rounded border border-slate-800 text-slate-400 break-all"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node-by-node race table -->
+      <div id="raceNodeTable" class="hidden mb-5">
+        <div class="text-[10px] text-slate-500 uppercase font-bold mb-2">All Nodes — Race Results</div>
+        <table class="text-[11px]">
+          <thead><tr>
+            <th>Node</th><th>Status</th><th>Nonces Tried</th><th>Time (s)</th><th>Hash (preview)</th>
+          </tr></thead>
+          <tbody id="raceNodeTbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Broadcast log -->
+      <div id="raceBroadcastDiv" class="hidden">
+        <div class="text-[10px] text-slate-500 uppercase font-bold mb-2">Broadcast Log — Winner's block sent to all peers</div>
+        <table class="text-[11px]">
+          <thead><tr>
+            <th>Node</th><th>Role</th><th>Accepted?</th><th>Reason</th>
+          </tr></thead>
+          <tbody id="raceBroadcastTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 2: Step-by-step SHA-256 verifier -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      <h2 class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1">
+        🔬 SHA-256 PoW Step-by-Step Verifier
+      </h2>
+      <p class="text-xs text-slate-500 mb-4">
+        Paste any mined block's fields. The server re-runs SHA-256 from scratch and shows
+        every step: JSON serialization → UTF-8 encoding → SHA-256 hash → difficulty check.
+        It also shows what nonce−1 would have produced, proving the nonce was genuinely needed.
+        <br><span class="text-blue-400">Tip: mine a block first, then paste the hash and nonce here.</span>
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase">Block Index</label>
+          <input id="vi_index" type="number" value="1" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase">Nonce</label>
+          <input id="vi_nonce" type="number" value="0" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase">Timestamp (unix float)</label>
+          <input id="vi_ts" type="number" step="any" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase">Claimed Hash (optional — to verify match)</label>
+          <input id="vi_hash" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none font-mono" placeholder="paste hash here">
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-[10px] text-slate-500 uppercase">Previous Hash</label>
+          <input id="vi_prev" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none font-mono" placeholder="0000...">
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-[10px] text-slate-500 uppercase">Transactions JSON (array)</label>
+          <textarea id="vi_txs" rows="3"
+            class="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs outline-none font-mono"
+            placeholder='[{"from":"Alice","to":"Bob","amount":50,"timestamp":...}]'></textarea>
+        </div>
+      </div>
+
+      <div class="flex gap-3 mb-5">
+        <button onclick="runVerify()"
+          class="bg-blue-800 hover:bg-blue-700 text-white px-6 py-2 rounded text-xs font-bold transition-all">
+          🔬 Verify This Block
+        </button>
+        <button onclick="autofillFromChain()"
+          class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-xs font-bold transition-all">
+          Auto-fill from last mined block
+        </button>
+      </div>
+
+      <div id="verifyOut" class="hidden">
+        <!-- Verdict banner -->
+        <div id="verifyVerdict" class="p-4 rounded-xl text-center text-sm font-bold mb-5"></div>
+
+        <!-- Step-by-step -->
+        <div class="space-y-3">
+
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+            <div class="text-[10px] text-slate-500 uppercase font-bold mb-2">Step 1 — Block Fields (input to hash function)</div>
+            <pre id="vs_fields" class="text-xs text-slate-300"></pre>
+          </div>
+
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+            <div class="text-[10px] text-slate-500 uppercase font-bold mb-2">Step 2 — JSON Serialized String (sort_keys=True)</div>
+            <pre id="vs_json" class="text-xs text-blue-200"></pre>
+          </div>
+
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+            <div class="text-[10px] text-slate-500 uppercase font-bold mb-2">Step 3 — UTF-8 Encoded (byte length)</div>
+            <pre id="vs_bytes" class="text-xs text-slate-400"></pre>
+          </div>
+
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+            <div class="text-[10px] text-slate-500 uppercase font-bold mb-2">Step 4 — SHA-256 Hash Output</div>
+            <pre id="vs_hash" class="text-xs font-mono break-all"></pre>
+          </div>
+
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+            <div class="text-[10px] text-slate-500 uppercase font-bold mb-2">Step 5 — Proof-of-Work Check</div>
+            <div id="vs_pow" class="text-xs space-y-1"></div>
+          </div>
+
+          <div id="vs_prev_nonce_div" class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+            <div class="text-[10px] text-slate-500 uppercase font-bold mb-2">Step 6 — Nonce−1 Check (proves this nonce was required)</div>
+            <div id="vs_prev_nonce" class="text-xs space-y-1"></div>
+          </div>
+
+          <div id="vs_match_div" class="bg-slate-950 border border-slate-800 rounded-xl p-4 hidden">
+            <div class="text-[10px] text-slate-500 uppercase font-bold mb-2">Step 7 — Stored Hash vs Recomputed Hash</div>
+            <div id="vs_match" class="text-xs space-y-1"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /pow panel -->
+
+</div><!-- /container -->
+
+<script>
+// ── Tab switching ─────────────────────────────────────────────
+function tab(name) {
+  ['ledger','consensus','attack','perf','pow'].forEach(t => {
+    document.getElementById('t-'+t).classList.remove('active');
+    document.getElementById('p-'+t).classList.remove('active');
+  });
+  document.getElementById('t-'+name).classList.add('active');
+  document.getElementById('p-'+name).classList.add('active');
+  if (name === 'ledger')    loadChain();
+  if (name === 'consensus') loadNodeStatus();
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function spin(id) {
+  document.getElementById(id).innerHTML =
+    `<span class="spinner inline-block mr-2">⟳</span> Working…`;
+}
+function api(url, opts={}) {
+  return fetch(url, opts).then(r => r.json());
+}
+function bar(val, max, color='#3b82f6') {
+  const pct = max > 0 ? (val/max*100).toFixed(1) : 0;
+  return `<div class="bar-wrap w-24"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+}
+function fmtHash(h) {
+  return `<span class="ok">${h.slice(0,8)}</span><span class="dim">${h.slice(8,20)}…</span>`;
+}
+
+// ── LEDGER ────────────────────────────────────────────────────
+let mempool = [];
+
+function addTx() {
+  const sender    = document.getElementById('sender').value;
+  const recipient = document.getElementById('recipient').value;
+  const amount    = parseFloat(document.getElementById('amount').value);
+  if (!amount || amount <= 0) return;
+
+  api('/transactions/new', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({sender, recipient, amount})
+  }).then(() => {
+    mempool.push({from: sender, to: recipient, amount});
+    renderMempool();
+  }).catch(() => {
+    mempool.push({from: sender, to: recipient, amount});
+    renderMempool();
+  });
+}
+
+function renderMempool() {
+  document.getElementById('mpCount').textContent = `${mempool.length} pending`;
+  const list = document.getElementById('mpList');
+  const btn  = document.getElementById('mineBtn');
+  if (mempool.length === 0) {
+    list.innerHTML = '<span class="text-slate-600 italic">No transactions pending</span>';
+    btn.classList.add('hidden');
+  } else {
+    list.innerHTML = mempool.map(t =>
+      `<div class="flex justify-between border-b border-slate-800 pb-1">
+        <span class="text-slate-300">${t.from} → ${t.to}</span>
+        <span class="text-blue-400 font-bold">${t.amount} CW</span>
+      </div>`
+    ).join('');
+    btn.classList.remove('hidden');
+  }
+}
+
+function mine() {
+  document.getElementById('mineBtn').textContent = '⛏ Mining (real PoW)…';
+  api('/mine').then(d => {
+    if (d.index !== undefined) {
+      mempool = [];
+      renderMempool();
+      // Show mine result
+      const div = document.getElementById('mineResult');
+      div.classList.remove('hidden');
+      document.getElementById('mineData').innerHTML = `
+        <div class="grid grid-cols-2 gap-1">
+          <span class="text-slate-500">Block index</span><span class="text-white">#${d.index}</span>
+          <span class="text-slate-500">Nonce</span><span class="text-white">${d.nonce}</span>
+          <span class="text-slate-500">Mine time</span><span class="text-emerald-400">${d.mine_time_sec}s</span>
+          <span class="text-slate-500">Transactions</span><span class="text-white">${d.transactions.length}</span>
+          <span class="text-slate-500">Hash</span><span class="text-blue-300 break-all">${d.hash}</span>
+        </div>`;
+      loadChain();
+    }
+  }).catch(err => {
+    alert('Server not running. Start Flask first.');
+  }).finally(() => {
+    document.getElementById('mineBtn').textContent = '⛏ Mine Block (Real PoW)';
+  });
+}
+
+function loadChain() {
+  api('/chain').then(d => {
+    document.getElementById('chainLen').textContent = `${d.length} blocks`;
+    document.getElementById('chainView').innerHTML = d.chain.slice().reverse().map((b, i) => `
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        <div class="bg-slate-800 px-4 py-2 flex justify-between items-center">
+          <span class="font-bold text-xs">Block #${b.index}
+            ${b.index === 0 ? '<span class="badge badge-yellow ml-2">GENESIS</span>' : ''}
+          </span>
+          <span class="text-[10px] text-slate-500">nonce: ${b.nonce}</span>
+        </div>
+        <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div>
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Hash</div>
+            <div class="font-mono text-blue-300 break-all bg-slate-950 p-2 rounded">${b.hash}</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Prev Hash</div>
+            <div class="font-mono text-slate-500 break-all bg-slate-950 p-2 rounded">${b.previous_hash}</div>
+          </div>
+          <div class="md:col-span-2">
+            <div class="text-[10px] text-slate-500 uppercase mb-1">Transactions (${b.transactions.length})</div>
+            <div class="bg-slate-950 rounded p-2 space-y-1">
+              ${b.transactions.length === 0
+                ? '<span class="text-slate-600 italic">Genesis — no transactions</span>'
+                : b.transactions.map(t =>
+                    `<div class="flex justify-between">
+                      <span class="text-slate-400">${t.from||t.sender} → ${t.to||t.recipient}</span>
+                      <span class="text-blue-400 font-bold">${t.amount} CW</span>
+                    </div>`).join('')
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+      ${i < d.chain.length - 1 ? '<div class="flex justify-center"><div class="w-px h-4 bg-slate-700"></div></div>' : ''}
+    `).join('');
+  }).catch(() => {
+    document.getElementById('chainView').innerHTML =
+      '<p class="text-red-400 text-xs">Server not reachable. Run Flask to use this tab.</p>';
+  });
+}
+
+// ── CONSENSUS ─────────────────────────────────────────────────
+function loadNodeStatus() {
+  api('/nodes/status').then(d => {
+    const rows = Object.entries(d).map(([id, info]) =>
+      `<tr>
+        <td>${id}${id==='node_0'?' <span class="badge badge-blue">primary</span>':''}</td>
+        <td>${info.length}</td>
+        <td class="font-mono text-blue-300">${info.last_hash}</td>
+        <td>${info.difficulty}</td>
+      </tr>`
+    ).join('');
+    document.getElementById('nodeStatusTable').innerHTML = `
+      <table class="text-[11px]">
+        <thead><tr><th>Node</th><th>Chain Length</th><th>Last Hash</th><th>Difficulty</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }).catch(() => {
+    document.getElementById('nodeStatusTable').innerHTML =
+      '<p class="text-red-400 text-xs">Server not reachable.</p>';
+  });
+}
+
+function syncNodes() {
+  const log = document.getElementById('nodeMineLog');
+  log.textContent = 'Syncing all nodes to node_0\'s chain…';
+  api('/nodes/sync', { method: 'POST' })
+    .then(d => {
+      log.innerHTML = `<span class="pass">✓ All nodes synced to node_0 (length=${d.synced_to_length})</span>\n\n` +
+        Object.entries(d.nodes).map(([id, info]) =>
+          `  ${id}: ${info.status} — length=${info.length}`
+        ).join('\n');
+      loadNodeStatus();
+    })
+    .catch(() => { log.textContent = 'Server not reachable.'; });
+}
+
+function mineOnNode() {
+  const node   = document.getElementById('mineNode').value;
+  const blocks = parseInt(document.getElementById('mineNodeBlocks').value);
+  const log    = document.getElementById('nodeMineLog');
+  log.textContent = 'Mining… (real PoW, may take a moment)';
+
+  api(`/nodes/mine/${node}`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({blocks, sender: `Miner_${node}`, recipient: 'Network'})
+  }).then(d => {
+    log.innerHTML = `<span class="pass">✓ Mined ${d.blocks_mined} block(s) on ${d.node}</span>\n` +
+      `Chain length now: ${d.new_chain_length}\n\n` +
+      d.blocks.map(b =>
+        `  Block #${b.index} | nonce=${b.nonce} | time=${b.mine_time_sec}s | hash ${b.hash}`
+      ).join('\n');
+    loadNodeStatus();
+  }).catch(() => { log.textContent = 'Server not reachable.'; });
+}
+
+function runConsensus() {
+  const out = document.getElementById('consensusOut');
+  out.textContent = 'Running consensus — validating all peer chains block-by-block…';
+
+  api('/consensus/run', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({target_node: 'node_0'})
+  }).then(d => {
+    let html = '';
+
+    // Header
+    html += `<span class="section">NAKAMOTO CONSENSUS — node: ${d.our_node}</span>\n`;
+    html += `<span class="info">Our chain length : ${d.our_length}</span>\n`;
+
+    if (d.replaced) {
+      html += `<span class="ok">✓ Chain REPLACED — adopted chain from ${d.winner} (length ${d.new_length})</span>\n`;
+    } else {
+      html += `<span class="ok">✓ Our chain is authoritative — no longer valid chain found</span>\n`;
+    }
+
+    html += `\n<span class="section">PEER EVALUATION LOG</span>\n`;
+
+    for (const peer of d.peers_evaluated) {
+      html += `\n<span class="data">── ${peer.node_id} (length=${peer.length}) ──</span>\n`;
+      html += `<span class="info">  Outcome: ${peer.outcome}</span>\n`;
+
+      if (peer.validation_log && peer.validation_log.length > 0) {
+        html += `<span class="info">  Validation:\n`;
+        for (const line of peer.validation_log) {
+          const cls = line.includes('OK') ? 'ok' : line.includes('FAIL') ? 'bad' : 'info';
+          html += `    <span class="${cls}">${escHtml(line)}</span>\n`;
+        }
+        html += `</span>`;
+      }
+    }
+
+    // Network propagation log
+    if (d.network_propagation) {
+      html += `\n<span class="section">NETWORK PROPAGATION — winning chain broadcast to all nodes</span>\n`;
+      for (const entry of d.network_propagation) {
+        const cls = entry.status.includes('updated') ? 'ok' : 'info';
+        html += `<span class="${cls}">  ${entry.node}: ${escHtml(entry.status)}</span>\n`;
+      }
+      html += `\n<span class="section">FINAL NETWORK STATE</span>\n`;
+      for (const [nid, len] of Object.entries(d.all_nodes_length)) {
+        html += `<span class="ok">  ${nid}: length=${len}</span>\n`;
+      }
+    }
+
+    out.innerHTML = html;
+    loadNodeStatus();
+  }).catch(() => {
+    out.textContent = 'Server not reachable. Start Flask to run consensus.';
+  });
+}
+
+// ── ATTACK ────────────────────────────────────────────────────
+function run51() {
+  const pct   = parseInt(document.getElementById('atkPct').value);
+  const depth = parseInt(document.getElementById('forkDepth').value);
+  const logEl = document.getElementById('atkLog');
+  logEl.textContent = `Launching 51% attack (${pct}% hash power, fork_depth=${depth})…\nMining PoW blocks — this may take several seconds.`;
+  document.getElementById('atkSummary').classList.add('hidden');
+
+  api('/attack/51', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({attacker_hash_pct: pct, fork_depth: depth})
+  }).then(d => {
+    // Summary cards
+    document.getElementById('atkSummary').classList.remove('hidden');
+    const won = d.attack_succeeded;
+    document.getElementById('atkOutcome').innerHTML =
+      won ? '<span class="fail">🔴 SUCCEEDED</span>' : '<span class="pass">🟢 FAILED</span>';
+    document.getElementById('atkChainLen').innerHTML =
+      `Attacker: <span class="fail">${d.attacker_chain_length}</span> vs Honest: <span class="pass">${d.honest_chain_length_after_race}</span>`;
+    document.getElementById('atkTime').textContent = `${d.avg_attacker_block_time_sec}s`;
+    document.getElementById('honTime').textContent = `${d.avg_honest_block_time_sec}s`;
+
+    // Step log
+    let html = '';
+    for (const line of d.step_log) {
+      let cls = 'info';
+      if (line.startsWith('===') || line.startsWith('---')) cls = 'section';
+      else if (line.includes('SUCCEEDED') || line.includes('double-spend')) cls = 'bad';
+      else if (line.includes('FAILED') || line.includes('retained')) cls = 'ok';
+      else if (line.includes('nonce=') || line.includes('hash=')) cls = 'data';
+      html += `<span class="${cls}">${escHtml(line)}</span>\n`;
+    }
+    logEl.innerHTML = html;
+  }).catch(err => {
+    logEl.textContent = 'Server not reachable. Start Flask to run this simulation.';
+  });
+}
+
+function runInvalidTests() {
+  document.getElementById('btnInvalid').textContent = 'Running…';
+
+  api('/attack/invalid-blocks').then(d => {
+    // Summary
+    const sumDiv = document.getElementById('invalidSummary');
+    sumDiv.classList.remove('hidden');
+    if (d.all_passed) {
+      sumDiv.innerHTML = '<span class="pass">✅ All ' + d.tests_run + ' invalid blocks correctly REJECTED</span>';
+      sumDiv.className = 'mb-4 p-3 rounded text-center text-sm font-bold bg-green-950 border border-green-800';
+    } else {
+      sumDiv.innerHTML = '<span class="fail">⚠️ Some blocks were wrongly accepted — logic error!</span>';
+      sumDiv.className = 'mb-4 p-3 rounded text-center text-sm font-bold bg-red-950 border border-red-800';
+    }
+
+    // Table
+    document.getElementById('invalidTable').classList.remove('hidden');
+    document.getElementById('invalidTbody').innerHTML = d.results.map((r, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td>${escHtml(r.test)}</td>
+        <td>${r.accepted
+          ? '<span class="badge badge-red">YES (WRONG)</span>'
+          : '<span class="badge badge-blue">NO</span>'}</td>
+        <td class="font-mono text-[10px]">${escHtml(r.reason)}</td>
+        <td>${r.passed
+          ? '<span class="badge badge-green">✓ PASS</span>'
+          : '<span class="badge badge-red">✗ FAIL</span>'}</td>
+      </tr>`).join('');
+
+    // Log
+    let html = `<span class="section">INVALID BLOCK REJECTION — difficulty=${d.difficulty}</span>\n\n`;
+    for (const r of d.results) {
+      html += `<span class="data">Test: ${escHtml(r.test)}</span>\n`;
+      html += `  Accepted : <span class="${r.accepted?'bad':'ok'}">${r.accepted ? 'YES (WRONG)' : 'NO'}</span>\n`;
+      html += `  Reason   : <span class="info">${escHtml(r.reason)}</span>\n`;
+      html += `  Result   : <span class="${r.passed?'ok':'bad'}">${r.passed?'PASS':'FAIL'}</span>\n\n`;
+    }
+    document.getElementById('invalidLog').innerHTML = html;
+  }).catch(() => {
+    document.getElementById('invalidLog').textContent = 'Server not reachable.';
+  }).finally(() => {
+    document.getElementById('btnInvalid').textContent = '🧪 Run Rejection Tests';
+  });
+}
+
+// ── PERFORMANCE ───────────────────────────────────────────────
+function perfParams() {
+  return {
+    difficulty:    parseInt(document.getElementById('pDiff').value),
+    num_blocks:    parseInt(document.getElementById('pBlocks').value),
+    txs_per_block: parseInt(document.getElementById('pTxs').value),
+    max_nodes:     parseInt(document.getElementById('pNodes').value),
+  };
+}
+
+function runBlockCreation() {
+  const p = perfParams();
+  document.getElementById('bcPlaceholder').textContent = `Mining ${p.num_blocks} blocks at difficulty=${p.difficulty}… (may take several seconds)`;
+  document.getElementById('bcTable').classList.add('hidden');
+  document.getElementById('bcSummary').classList.add('hidden');
+
+  api('/performance/block-creation', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(p)
+  }).then(d => {
+    document.getElementById('bcPlaceholder').classList.add('hidden');
+    document.getElementById('bcSummary').classList.remove('hidden');
+    document.getElementById('bcAvg').textContent = d.avg_time_sec;
+    document.getElementById('bcMin').textContent = d.min_time_sec;
+    document.getElementById('bcMax').textContent = d.max_time_sec;
+
+    const maxT = Math.max(...d.blocks.map(b=>b.time_sec));
+    document.getElementById('bcTbody').innerHTML = d.blocks.map(b => `
+      <tr>
+        <td>#${b.block_index}</td>
+        <td>${b.nonce}</td>
+        <td class="font-mono text-blue-300">${b.hash_prefix}…</td>
+        <td>${b.tx_count}</td>
+        <td class="${b.time_sec > d.avg_time_sec ? 'text-red-400' : 'text-green-400'}">${b.time_sec}</td>
+        <td>${bar(b.time_sec, maxT, '#3b82f6')}</td>
+      </tr>`).join('');
+    document.getElementById('bcTable').classList.remove('hidden');
+  }).catch(() => {
+    document.getElementById('bcPlaceholder').textContent = 'Server not reachable.';
+    document.getElementById('bcPlaceholder').classList.remove('hidden');
+  });
+}
+
+function runThroughput() {
+  const p = perfParams();
+  document.getElementById('tpPlaceholder').textContent = 'Running throughput benchmark…';
+  document.getElementById('tpBox').classList.add('hidden');
+  document.getElementById('tpDetail').classList.add('hidden');
+
+  api('/performance/throughput', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(p)
+  }).then(d => {
+    document.getElementById('tpPlaceholder').classList.add('hidden');
+    document.getElementById('tpBox').classList.remove('hidden');
+    document.getElementById('tpValue').textContent = d.throughput_tps;
+    document.getElementById('tpDetail').classList.remove('hidden');
+    document.getElementById('tpTbody').innerHTML = [
+      ['Total blocks mined', d.total_blocks],
+      ['Total transactions confirmed', d.total_txs],
+      ['Total mining time', d.total_time_sec + ' s'],
+      ['Throughput', d.throughput_tps + ' TPS'],
+    ].map(([k,v]) => `<tr><td>${k}</td><td class="font-bold">${v}</td></tr>`).join('');
+  }).catch(() => {
+    document.getElementById('tpPlaceholder').textContent = 'Server not reachable.';
+    document.getElementById('tpPlaceholder').classList.remove('hidden');
+  });
+}
+
+function runNetDelay() {
+  const p = perfParams();
+  document.getElementById('ndPlaceholder').textContent = 'Running network delay benchmark…';
+  document.getElementById('ndTable').classList.add('hidden');
+  document.getElementById('ndSummary').classList.add('hidden');
+
+  api('/performance/network-delay', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({num_nodes: p.max_nodes, difficulty: p.difficulty})
+  }).then(d => {
+    document.getElementById('ndPlaceholder').classList.add('hidden');
+    document.getElementById('ndSummary').classList.remove('hidden');
+    document.getElementById('ndAvg').textContent = d.avg_propagation_delay_ms + ' ms';
+    document.getElementById('ndTbody').innerHTML = d.per_node.map(n => `
+      <tr>
+        <td>Node ${n.node}</td>
+        <td>${n.validation_ms}</td>
+        <td>${n.hop_latency_ms}</td>
+        <td class="font-bold">${n.total_delay_ms}</td>
+        <td>${n.accepted
+          ? '<span class="badge badge-green">Yes</span>'
+          : '<span class="badge badge-red">No</span>'}</td>
+      </tr>`).join('');
+    document.getElementById('ndTable').classList.remove('hidden');
+  }).catch(() => {
+    document.getElementById('ndPlaceholder').textContent = 'Server not reachable.';
+    document.getElementById('ndPlaceholder').classList.remove('hidden');
+  });
+}
+
+function runScalability() {
+  const p = perfParams();
+  document.getElementById('scPlaceholder').textContent =
+    `Benchmarking 1–${p.max_nodes} nodes… (mines one block per level, may take a while)`;
+  document.getElementById('scTable').classList.add('hidden');
+
+  api('/performance/scalability', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({max_nodes: p.max_nodes, difficulty: p.difficulty, txs_per_block: p.txs_per_block})
+  }).then(d => {
+    document.getElementById('scPlaceholder').classList.add('hidden');
+    const maxC = Math.max(...d.scalability.map(r=>r.total_confirmation_sec));
+    document.getElementById('scTbody').innerHTML = d.scalability.map(r => `
+      <tr>
+        <td>${r.node_count}</td>
+        <td>${r.mine_time_sec}</td>
+        <td>${r.max_propagation_sec}</td>
+        <td class="font-bold">${r.total_confirmation_sec}</td>
+        <td>${r.nonce}</td>
+        <td>${bar(r.total_confirmation_sec, maxC, '#f97316')}</td>
+      </tr>`).join('');
+    document.getElementById('scTable').classList.remove('hidden');
+  }).catch(() => {
+    document.getElementById('scPlaceholder').textContent = 'Server not reachable.';
+    document.getElementById('scPlaceholder').classList.remove('hidden');
+  });
+}
+
+// ── POW RACE ──────────────────────────────────────────────────
+function runRace() {
+  const btn = document.getElementById('raceBtn');
+  btn.textContent = 'Racing… all 4 nodes mining with real PoW (may take a few seconds)';
+  btn.disabled = true;
+  document.getElementById('raceWinner').classList.add('hidden');
+  document.getElementById('raceNodeTable').classList.add('hidden');
+  document.getElementById('raceBroadcastDiv').classList.add('hidden');
+
+  api('/mine/race', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      sender:    document.getElementById('raceSender').value,
+      recipient: document.getElementById('raceRecipient').value,
+      amount:    parseFloat(document.getElementById('raceAmount').value)
+    })
+  }).then(d => {
+    const w = d.winner;
+
+    // Winner card
+    document.getElementById('raceWinner').classList.remove('hidden');
+    document.getElementById('rw_node').textContent  = w.winner_node;
+    document.getElementById('rw_nonce').textContent = w.nonce;
+    document.getElementById('rw_time').textContent  = w.mine_time_sec + 's';
+    document.getElementById('rw_pow').innerHTML     = w.pow_satisfied
+      ? '<span class="pass">✓ YES</span>' : '<span class="fail">✗ NO</span>';
+    document.getElementById('rw_diff').textContent  =
+      `Difficulty = ${w.difficulty}  →  hash must start with "${w.leading_zeros_required}"  →  actual: "${w.hash_starts_with}"`;
+    // Highlight the leading zeros in the hash
+    const h = w.hash;
+    const zeros = h.slice(0, w.difficulty);
+    const rest  = h.slice(w.difficulty);
+    document.getElementById('rw_hash').innerHTML =
+      `<span class="pass font-bold">${zeros}</span><span class="text-slate-300">${rest}</span>`;
+    document.getElementById('rw_prev').textContent = w.previous_hash;
+
+    // Node race table
+    document.getElementById('raceNodeTable').classList.remove('hidden');
+    document.getElementById('raceNodeTbody').innerHTML = Object.entries(d.node_race_results).map(([nid, r]) => {
+      const won = r.status === 'WON';
+      return `<tr class="${won ? 'bg-emerald-950' : ''}">
+        <td>${nid} ${won ? '🏆' : ''}</td>
+        <td><span class="badge ${won ? 'badge-green' : 'badge-blue'}">${r.status}</span></td>
+        <td>${r.nonces_tried}</td>
+        <td>${r.time_sec}</td>
+        <td class="font-mono text-[10px]">${r.hash || '—'}</td>
+      </tr>`;
+    }).join('');
+
+    // Broadcast log
+    document.getElementById('raceBroadcastDiv').classList.remove('hidden');
+    document.getElementById('raceBroadcastTbody').innerHTML = d.broadcast_log.map(b => `
+      <tr>
+        <td>${b.node}</td>
+        <td><span class="badge badge-blue">${b.role}</span></td>
+        <td>${b.accepted !== undefined
+          ? (b.accepted ? '<span class="badge badge-green">YES</span>' : '<span class="badge badge-red">NO</span>')
+          : '—'}</td>
+        <td class="font-mono text-[10px]">${b.reason || b.action || ''}</td>
+      </tr>`).join('');
+
+    loadChain();
+  }).catch(() => {
+    alert('Server not reachable. Start Flask to run the race.');
+  }).finally(() => {
+    btn.textContent = '▶ Start Mining Race (4 nodes, real PoW)';
+    btn.disabled = false;
+  });
+}
+
+// ── POW STEP VERIFIER ─────────────────────────────────────────
+let _lastMinedBlock = null;   // saved from mine() calls
+
+function autofillFromChain() {
+  api('/chain').then(d => {
+    const blocks = d.chain.filter(b => b.index > 0);
+    if (blocks.length === 0) {
+      alert('Mine at least one block first (Ledger tab or PoW Race).');
+      return;
+    }
+    const b = blocks[blocks.length - 1];
+    document.getElementById('vi_index').value = b.index;
+    document.getElementById('vi_nonce').value = b.nonce;
+    document.getElementById('vi_ts').value    = b.timestamp;
+    document.getElementById('vi_prev').value  = b.previous_hash;
+    document.getElementById('vi_hash').value  = b.hash;
+    document.getElementById('vi_txs').value   = JSON.stringify(b.transactions, null, 2);
+  }).catch(() => alert('Server not reachable.'));
+}
+
+function runVerify() {
+  let txs;
+  try {
+    txs = JSON.parse(document.getElementById('vi_txs').value || '[]');
+  } catch(e) {
+    alert('Transactions field is not valid JSON.\nExample: [{"from":"Alice","to":"Bob","amount":50,"timestamp":1234567}]');
+    return;
+  }
+
+  const body = {
+    index:         parseInt(document.getElementById('vi_index').value),
+    nonce:         parseInt(document.getElementById('vi_nonce').value),
+    timestamp:     parseFloat(document.getElementById('vi_ts').value),
+    previous_hash: document.getElementById('vi_prev').value,
+    transactions:  txs,
+    hash:          document.getElementById('vi_hash').value || undefined
+  };
+  if (!body.hash) delete body.hash;
+
+  api('/pow/verify', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  }).then(d => {
+    document.getElementById('verifyOut').classList.remove('hidden');
+    const s = d.steps;
+    const valid = s['5_pow_satisfied'];
+
+    // Verdict
+    const vv = document.getElementById('verifyVerdict');
+    vv.textContent = d.verdict;
+    vv.className = `p-4 rounded-xl text-center text-sm font-bold mb-5 border ${
+      valid
+        ? 'bg-emerald-950 border-emerald-800 text-emerald-300'
+        : 'bg-red-950 border-red-800 text-red-300'
+    }`;
+
+    // Steps
+    document.getElementById('vs_fields').textContent =
+      JSON.stringify(s['1_block_fields'], null, 2);
+    document.getElementById('vs_json').textContent =
+      s['2_json_serialized'];
+    document.getElementById('vs_bytes').textContent =
+      `${s['3_utf8_hex_length_bytes']} bytes`;
+
+    const h = s['4_sha256_hash'];
+    const diff = s['5_difficulty_required'];
+    document.getElementById('vs_hash').innerHTML =
+      `<span class="pass font-bold">${h.slice(0,diff)}</span><span class="text-slate-300">${h.slice(diff)}</span>`;
+
+    document.getElementById('vs_pow').innerHTML = `
+      <div class="grid grid-cols-2 gap-2">
+        <div class="bg-slate-900 rounded p-2">
+          <div class="text-[10px] text-slate-500 mb-1">Required prefix</div>
+          <div class="font-mono text-yellow-300">"${s['5_prefix_needed']}"</div>
+        </div>
+        <div class="bg-slate-900 rounded p-2">
+          <div class="text-[10px] text-slate-500 mb-1">Actual hash prefix</div>
+          <div class="font-mono ${valid?'text-emerald-400':'text-red-400'}">"${s['5_hash_prefix_actual']}"</div>
+        </div>
+      </div>
+      <div class="mt-2 font-bold ${valid?'pass':'fail'}">
+        ${valid ? '✓ Condition satisfied — this nonce is a valid proof-of-work' : '✗ Condition NOT satisfied — this nonce is invalid'}
+      </div>`;
+
+    // Nonce-1
+    const pn = d.nonce_minus_1_check;
+    if (pn && pn.hash) {
+      document.getElementById('vs_prev_nonce_div').classList.remove('hidden');
+      document.getElementById('vs_prev_nonce').innerHTML = `
+        <div class="mb-1"><span class="text-slate-500">Nonce−1 = </span><span class="text-white">${pn.nonce}</span></div>
+        <div class="mb-1 font-mono break-all">
+          Hash: <span class="${pn.valid ? 'pass' : 'fail'}">${pn.hash}</span>
+        </div>
+        <div class="${pn.valid ? 'pass' : 'text-yellow-400'}">
+          ${pn.valid ? '⚠ Nonce−1 also valid (unusual but possible)' : '✓ ' + pn.proves}
+        </div>`;
+    }
+
+    // Hash match
+    if (s['6_stored_hash_matches'] !== null && s['6_stored_hash_matches'] !== undefined) {
+      document.getElementById('vs_match_div').classList.remove('hidden');
+      const matches = s['6_stored_hash_matches'];
+      document.getElementById('vs_match').innerHTML = `
+        <div class="mb-1"><span class="text-slate-500">Stored hash  : </span><span class="font-mono text-slate-300">${document.getElementById('vi_hash').value}</span></div>
+        <div class="mb-1"><span class="text-slate-500">Recomputed   : </span><span class="font-mono text-blue-300">${h}</span></div>
+        <div class="font-bold ${matches ? 'pass' : 'fail'}">
+          ${matches ? '✓ Hashes match — block data was not tampered with' : '✗ Hashes do NOT match — block data was tampered after mining'}
+        </div>`;
+    }
+
+  }).catch(() => alert('Server not reachable.'));
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Init
+loadChain();
+renderMempool();
+</script>
+</body>
+</html>
